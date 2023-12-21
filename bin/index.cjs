@@ -4,8 +4,11 @@ const { exec } = require('child_process');
 const axios = require('axios');
 const yargs = require('yargs/yargs');
 const { hideBin } = require('yargs/helpers');
+const path = require('path');
 const fs = require('fs');
-const configFilePath = './openai_config.json';
+
+// Define the path to the configuration file relative to the script's location
+const configFilePath = path.join(__dirname, 'openai_config.json');
 
 // Function to save the API key to a config file
 const saveApiKey = (apiKey) => {
@@ -28,19 +31,47 @@ const executeCommand = (command, callback) => {
   });
 };
 
+// Function to read content from a file with optional line numbers
+const readFileContent = (filePath) => {
+    console.log('file path', filePath);
+  
+    // Splitting the file path and line numbers
+    const [path, lineRange] = filePath.split(':');
+    const startLine = lineRange ? parseInt(lineRange.split('-')[0], 10) : null;
+    const endLine = lineRange ? parseInt(lineRange.split('-')[1], 10) : null;
+  
+    try {
+      const fileContent = fs.readFileSync(path, 'utf8');
+      if (startLine !== null && endLine !== null) {
+        // Selecting specific lines
+        return fileContent.split('\n').slice(startLine - 1, endLine).join('\n');
+      }
+      return fileContent;
+    } catch (error) {
+      console.error(`Error reading file: ${path}`, error.message);
+      return null;
+    }
+  };
+
 // Function to send request to OpenAI
-const sendOpenAIRequest = async (output) => {
+const sendOpenAIRequest = async (output, fileContent) => {
   const apiKey = getApiKey();
   if (!apiKey) {
     console.error('No OpenAI API key configured. Please set the key using the config command.');
     return;
   }
 
-  console.log("Logging question:", output);
+  let content = output;
+  if (fileContent) {
+    content += `\nFile Content:\n${fileContent}`;
+  }
+
+  console.log("Logging question:", content);
+
   try {
     const response = await axios.post('https://api.openai.com/v1/chat/completions', {
-        messages: [{ role: "user", content: "Help me understand why I'd be getting this error: " + output }],
-        model: "gpt-3.5-turbo",
+        messages: [{ role: "system", content: "Help me understand why I'd be getting this error:"}, { role: "user", content }],
+        model: "gpt-4",
     }, {
         headers: {
             'Authorization': `Bearer ${apiKey}`,
@@ -57,13 +88,11 @@ const sendOpenAIRequest = async (output) => {
 // Main function
 const main = async () => {
   executeCommand(argv.command, async (error, stdout, stderr) => {
-    if (error) {
-        const output = stderr;
-        const answer = await sendOpenAIRequest(output);
-        console.log(`Answer: ${answer}`);
-    } else {
-        console.log('Command executed successfully:', stdout);
-    }
+    let output = error ? stderr : stdout;
+    console.log("file", argv.file);
+    const fileContent = argv.file ? readFileContent(argv.file) : null;
+    const answer = await sendOpenAIRequest(output, fileContent);
+    console.log(`Answer: ${answer}`);
   });
 };
 
@@ -75,6 +104,11 @@ const argv = yargs(hideBin(process.argv))
       describe: 'Command to execute',
       type: 'string',
       demandOption: true,
+    },
+    file: {
+      alias: 'f',
+      describe: 'File to include in the request',
+      type: 'string',
     },
   })
   .command('config', 'Configure API key', {
