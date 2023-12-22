@@ -67,10 +67,10 @@ aidebugs --command "python3 scripts/script1.py" --file "scripts/script1.py" "scr
 
 ### Specify file lines
 
-You can also specify a range of file lines to include into your context instead of entire files. For example,
+You can also specify a range of file lines to include into your context instead of entire files. You can do this while passing in the filename- "filename.abc:num1-num2" with the range of lines being from line numbers 'num1-num2' right after the ':'. For example,
 
 ```sh
-aidebugs --command "python3 scripts/script1.py" --file "scripts/script1.py:2-2" "scripts/script2.py"
+aidebugs --command "python3 scripts/script1.py" --file "scripts/script1.py:1-2" "scripts/script2.py"
 ```
 
 <div align="center">
