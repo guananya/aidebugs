@@ -5,7 +5,7 @@
   </div>
 	<p>A CLI that debugs error messages produced in your command line by calling an LLM! </p>
 	<a href="https://www.npmjs.com/package/aidebugs"><img src="https://img.shields.io/npm/v/aidebugs" alt="Current version"></a>
-  <p> Shoutout to <a> aicommits </a href="https://github.com/Nutlope/aicommits"> for the inspiration! </p>
+  <p> Shoutout to <a href="https://github.com/Nutlope/aicommits> aicommits </a"> for the inspiration! </p>
   <img src=".github/example.png" alt="aidebugs --command "npm run dev"/>
 </div>
 
