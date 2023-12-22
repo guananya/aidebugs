@@ -6,6 +6,7 @@ const yargs = require('yargs/yargs');
 const { hideBin } = require('yargs/helpers');
 const path = require('path');
 const fs = require('fs');
+const chalk = require('chalk'); // Assuming you have chalk installed
 
 // Define the path to the configuration file relative to the script's location
 const configFilePath = path.join(__dirname, 'openai_config.json');
@@ -14,6 +15,11 @@ const configFilePath = path.join(__dirname, 'openai_config.json');
 const saveApiKey = (apiKey) => {
   fs.writeFileSync(configFilePath, JSON.stringify({ apiKey }));
 };
+
+const handleConfigCommand = (key) => {
+    saveApiKey(key);
+    console.log('API key configured successfully.');
+  };
 
 // Function to read the API key from the config file
 const getApiKey = () => {
@@ -31,43 +37,56 @@ const executeCommand = (command, callback) => {
   });
 };
 
-// Function to read content from a file with optional line numbers
-const readFileContent = (filePath) => {
-    console.log('file path', filePath);
-  
-    // Splitting the file path and line numbers
-    const [path, lineRange] = filePath.split(':');
-    const startLine = lineRange ? parseInt(lineRange.split('-')[0], 10) : null;
-    const endLine = lineRange ? parseInt(lineRange.split('-')[1], 10) : null;
-  
-    try {
-      const fileContent = fs.readFileSync(path, 'utf8');
-      if (startLine !== null && endLine !== null) {
-        // Selecting specific lines
-        return fileContent.split('\n').slice(startLine - 1, endLine).join('\n');
-      }
-      return fileContent;
-    } catch (error) {
-      console.error(`Error reading file: ${path}`, error.message);
-      return null;
+// Function to read content from multiple files with optional line numbers
+const readFileContent = (filePaths) => {
+    // Ensure filePaths is always an array
+    if (!Array.isArray(filePaths)) {
+      filePaths = [filePaths];
     }
-  };
+
+    console.log('file paths', filePaths);
+  
+    return filePaths.map(filePath => {
+      // Splitting the file path and line numbers
+      const [path, lineRange] = filePath.split(':');
+      const startLine = lineRange ? parseInt(lineRange.split('-')[0], 10) : null;
+      const endLine = lineRange ? parseInt(lineRange.split('-')[1], 10) : null;
+  
+      try {
+        const fileContent = fs.readFileSync(path, 'utf8');
+        let content = `File Path: ${filePath}\n`;
+        if (startLine !== null && endLine !== null) {
+          // Selecting specific lines and prepending the file path
+          content += fileContent.split('\n').slice(startLine - 1, endLine).join('\n');
+        } else {
+          content += fileContent;
+        }
+        return content;
+      } catch (error) {
+        console.error(`Error reading file: ${path}`, error.message);
+        return `Error reading file: ${filePath}`;
+      }
+    }).join('\n\n'); // Concatenate contents of all files, separated by two newlines
+};
 
 // Function to send request to OpenAI
 const sendOpenAIRequest = async (output, fileContent) => {
   const apiKey = getApiKey();
   if (!apiKey) {
+    console.log(chalk.bgBlue(chalk.black('Hi! 👋 Get your OpenAI API key from https://platform.openai.com/account/api-keys to get started using aidebugs. This isn\'t stored anywhere! \n')));
     console.error('No OpenAI API key configured. Please set the key using the config command.');
     return;
   }
-
   let content = output;
   if (fileContent) {
     content += `\nFile Content:\n${fileContent}`;
   }
 
-  console.log("Logging question:", content);
+  console.log(chalk.bgRed(chalk.white(`The error message being addressed: \n`))); 
+  console.log(`${output}`); 
 
+  console.log(chalk.bgBlue(chalk.white('Sending error to OpenAI API \n')));
+  console.log('Processing 🌀 Please wait... \n')
   try {
     const response = await axios.post('https://api.openai.com/v1/chat/completions', {
         messages: [{ role: "system", content: "Help me understand why I'd be getting this error:"}, { role: "user", content }],
@@ -87,29 +106,42 @@ const sendOpenAIRequest = async (output, fileContent) => {
 
 // Main function
 const main = async () => {
-  executeCommand(argv.command, async (error, stdout, stderr) => {
-    let output = error ? stderr : stdout;
-    console.log("file", argv.file);
-    const fileContent = argv.file ? readFileContent(argv.file) : null;
-    const answer = await sendOpenAIRequest(output, fileContent);
-    console.log(`Answer: ${answer}`);
-  });
-};
+    executeCommand(argv.command, async (error, stdout, stderr) => {
+      let output = error ? stderr : stdout;
+      const fileContent = argv.file ? readFileContent(argv.file) : null;
+
+      // Start the loading indicator
+      let loadingMessage = '';
+      const loadingInterval = setInterval(() => {
+        process.stdout.write(`\r${loadingMessage}`);
+        loadingMessage += '.';
+      }, 500); // Update the message every 500ms
+  
+      try {
+        const answer = await sendOpenAIRequest(output, fileContent);
+        clearInterval(loadingInterval); // Clear the loading indicator
+        console.log(chalk.bgGreen(chalk.white(`\r Tips to get rid of the error: \n`)));
+        console.log(`${answer}`);
+        console.log('\n')
+      } catch (error) {
+        clearInterval(loadingInterval); // Clear the loading indicator
+        console.error(`\r${chalk.red(`Error: ${error.message}`)}`);
+      }
+    });
+  };
+  
 
 // Command line argument parsing
 const argv = yargs(hideBin(process.argv))
-  .command('run', 'Execute a command', {
-    command: {
-      alias: 'c',
-      describe: 'Command to execute',
-      type: 'string',
-      demandOption: true,
-    },
-    file: {
-      alias: 'f',
-      describe: 'File to include in the request',
-      type: 'string',
-    },
+  .option('command', {
+    alias: 'c',
+    describe: 'Command to execute',
+    type: 'string',
+  })
+  .option('file', {
+    alias: 'f',
+    describe: 'Files to include in the request',
+    type: 'array',
   })
   .command('config', 'Configure API key', {
     key: {
@@ -123,9 +155,19 @@ const argv = yargs(hideBin(process.argv))
   .argv;
 
 // Determine which command is being used
-if (argv._.includes('config') && argv.key) {
-  saveApiKey(argv.key);
-  console.log('API key configured successfully.');
+if (argv._.includes('config')) {
+  // Handle 'config' command
+  if (argv.key) {
+    saveApiKey(argv.key);
+    console.log('API key configured successfully.');
+  } else {
+    console.error('API key is required for config command');
+  }
 } else {
-  main();
-} 
+  // Proceed with the main function for other commands
+  if (!argv.command) {
+    console.error('Missing required argument: command');
+  } else {
+    main();
+  }
+}
