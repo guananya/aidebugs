@@ -81,4 +81,4 @@ aidebugs --command "python3 scripts/script1.py" --file "scripts/script1.py:2-2" 
 
 - Be able to include custom prompts such as "I expected an output of 4 but got 5- what could the issue be?" instead of it just debugging when an error is hit. 
 - Expanding on that, even using this as a debugging buddy! It's common to include print and logging statements in specific places to help understand where your code may have an issue- it would be cool to have this tool add these by itself to help the user debug their code! 
-- Make it prettier using chalk and other tools 
+- Make it prettier, better error handling
