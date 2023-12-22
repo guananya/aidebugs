@@ -72,9 +72,10 @@ const readFileContent = (filePaths) => {
 // Function to send request to OpenAI
 const sendOpenAIRequest = async (output, fileContent) => {
   const apiKey = getApiKey();
+
   if (!apiKey) {
-    console.log(chalk.bgBlue(chalk.black('Hi! 👋 Get your OpenAI API key from https://platform.openai.com/account/api-keys to get started using aidebugs. This isn\'t stored anywhere! \n')));
-    console.error('No OpenAI API key configured. Please set the key using the config command.');
+    console.log(chalk.black('Hi! 👋 Get your OpenAI API key from https://platform.openai.com/account/api-keys to get started using aidebugs. This isn\'t stored anywhere! \n'));
+    console.error('Run: aidebugs config --key <your_api_key> \n');
     return;
   }
   let content = output;
@@ -89,7 +90,7 @@ const sendOpenAIRequest = async (output, fileContent) => {
   console.log('Processing 🌀 Please wait... \n')
   try {
     const response = await axios.post('https://api.openai.com/v1/chat/completions', {
-        messages: [{ role: "system", content: "Help me understand why I'd be getting this error:"}, { role: "user", content }],
+        messages: [{ role: "system", content: "Help me understand why I'd be getting this error, and if I've provided file content explain how I should change it if needed to fix the error:"}, { role: "user", content }],
         model: "gpt-4",
     }, {
         headers: {
@@ -120,6 +121,9 @@ const main = async () => {
       try {
         const answer = await sendOpenAIRequest(output, fileContent);
         clearInterval(loadingInterval); // Clear the loading indicator
+        if (answer == undefined) {
+            return;
+        }
         console.log(chalk.bgGreen(chalk.white(`\r Tips to get rid of the error: \n`)));
         console.log(`${answer}`);
         console.log('\n')

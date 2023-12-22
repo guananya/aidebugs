@@ -5,7 +5,7 @@
   </div>
 	<p>A CLI that debugs error messages produced in your command line by calling an LLM! </p>
 	<a href="https://www.npmjs.com/package/aidebugs"><img src="https://img.shields.io/npm/v/aidebugs" alt="Current version"></a>
-  <p> Influenced by <a> aicommits! </a href="https://github.com/Nutlope/aicommits"> </p>
+  <p> Shoutout to <a> aicommits </a href="https://github.com/Nutlope/aicommits"> for the inspiration! </p>
 </div>
 
 ## Setup
@@ -49,8 +49,9 @@ Utilize the --command flag to specify a command for the terminal to execute. Any
 ```sh
 aidebugs --command "npm run dev"
 ```
-
-Add video here 
+<div align="center">
+  <img src=".github/usage1.png" alt="aidebugs --command "npm run dev"/>
+</div>
 
 ### Include files 
 
@@ -60,7 +61,9 @@ You can also include files for added context on understanding your error message
 aidebugs --command "python3 scripts/script1.py" --file "scripts/script1.py" "scripts/script2.py"
 ```
 
-Add video here
+<div align="center">
+  <img src=".github/usage2.png" alt="aidebugs --command "npm run dev"/>
+</div>
 
 ### Specify file lines
 
@@ -70,12 +73,12 @@ You can also specify a range of file lines to include into your context instead 
 aidebugs --command "python3 scripts/script1.py" --file "scripts/script1.py:2-2" "scripts/script2.py"
 ```
 
-## Future Additions
+<div align="center">
+  <img src=".github/usage3.png" alt="aidebugs --command "npm run dev"/>
+</div>
 
-Be able to include custom prompts such as "I expected an output of 4 but got 5- what could the issue be?". And have it debug. 
-Or maybe have it include print/logging statements wherever possible. 
+## Additions coming soon
 
-Beautify it- would love tips on that! For example, instead of 
-
-Also want to make something that makes file's searchable. I find in my large codebases its difficult. But this may not be the best suited for a command line interface and rather for a text editor like VS code! 
-
+- Be able to include custom prompts such as "I expected an output of 4 but got 5- what could the issue be?" instead of it just debugging when an error is hit. 
+- Expanding on that, even using this as a debugging buddy! It's common to include print and logging statements in specific places to help understand where your code may have an issue- it would be cool to have this tool add these by itself to help the user debug their code! 
+- Make it prettier using chalk and other tools 
